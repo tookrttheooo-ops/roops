@@ -83,7 +83,7 @@ galleryLinks.forEach(link => {
   img.src = link;
   img.onclick = () => {
     const url = `gallery.html?folder=${g.folder}&prefix=${g.prefix}&image=${g.thumb}`;
-    window.location.href = url;
+    window.open(url, "_blank");
   };
   galleryDiv.appendChild(img);
 });
