@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Gallery Thumbnails</title>
+<style>
+body { margin:0; font-family:Arial; background:#111; color:white; }
+.gallery { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:8px; padding:10px; }
+.gallery img { width:100%; border-radius:6px; cursor:pointer; transition:0.2s; }
+.gallery img:hover { transform:scale(1.05); }
+</style>
+</head>
+<body>
+
+<h2 style="padding-left:10px;">Galleries</h2>
+<div class="gallery" id="galleryList"></div>
+
+<script>
+// ---------------------------
+// FULL LINKS ONLY — add one per gallery
+// ---------------------------
+const galleryLinks = [
+  "https://cdn.elitebabes.com/content/180759/0003-04.jpg",
+  "https://cdn.elitebabes.com/content/180964/0003-01.jpg",
+  "https://cdn.elitebabes.com/content/180301/0002-07.jpg",
+  "https://cdn.elitebabes.com/content/190332/0003-04.jpg",
+  "https://cdn.elitebabes.com/content/180639/0037-05.jpg",
+  "https://cdn.elitebabes.com/content/251127/0012-01.jpg",
+  "https://cdn.elitebabes.com/content/250964/0006-03.jpg"
+];
+
+ const galleryDiv = document.getElementById("galleryList");
+
+// ---------------------------
+// Parse link to extract folder & prefix
+// ---------------------------
+function parseLink(url) {
+  const match = url.match(/^(.*\/)(\d{4}-)(\d{2})(\.jpg)$/);
+  if (!match) return null;
+  return {
+    folder: match[1].split('/').slice(-2,-1)[0], // folder = 180759
+    prefix: match[2].slice(0,4),                 // prefix = 0003
+    thumb: match[3]                              // image number
+  };
+}
+
+// ---------------------------
+// Build thumbnail tiles
+// ---------------------------
+galleryLinks.forEach(link => {
+  const g = parseLink(link);
+  if (!g) return;
+
+  const img = document.createElement("img");
+  img.src = link;
+  img.onclick = () => {
+    const url = `gallery.html?folder=${g.folder}&prefix=${g.prefix}&image=${g.thumb}`;
+    window.location.href = url;
+  };
+  galleryDiv.appendChild(img);
+});
+</script>
+
+</body>
+</html>
