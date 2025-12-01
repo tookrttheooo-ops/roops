@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Gallery Viewer</title>
+<style>
+body { margin:0; font-family:Arial; background:#111; color:white; }
+.gallery-view { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; padding:10px; }
+.gallery-view img { width:100%; border-radius:6px; cursor:pointer; transition:0.2s; }
+.gallery-view img:hover { transform:scale(1.05); }
+
+#viewer { position:fixed; inset:0; background:rgba(0,0,0,0.9); display:none; align-items:center; justify-content:center; overflow:hidden; z-index:9999; }
+#viewer.show { display:flex; }
+#viewer img { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; }
+.arrow { position:absolute; top:50%; transform:translateY(-50%); font-size:50px; cursor:pointer; padding:20px; user-select:none; }
+#left { left:20px; } #right { right:20px; }
+#closeBtn { position:absolute; top:10px; right:20px; font-size:40px; cursor:pointer; user-select:none; }
+</style>
+</head>
+<body>
+
+<h2 style="padding-left:10px;">Gallery</h2>
+<div id="galleryView" class="gallery-view"></div>
+
+<div id="viewer">
+  <span id="closeBtn">&#10005;</span>
+  <span id="left" class="arrow">&#10094;</span>
+  <img id="viewImg">
+  <span id="right" class="arrow">&#10095;</span>
+</div>
+
+<script>
+// ---------------------------
+// Get URL params
+// ---------------------------
+const params = new URLSearchParams(window.location.search);
+const folder = params.get("folder");
+const prefix = params.get("prefix");
+const imageNo = params.get("image");
+
+if (!folder || !prefix || !imageNo) {
+  document.body.innerHTML = "<h2 style='color:red;padding:20px;'>No gallery specified</h2>";
+}
+
+// ---------------------------
+// Check image exists
+// ---------------------------
+function checkImage(url) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => res(true);
+    img.onerror = () => res(false);
+    img.src = url;
+  });
+}
+
+// ---------------------------
+// Auto-load gallery from a sample
+// ---------------------------
+async function loadAutoGallery() {
+  const baseURL = `https://cdn.elitebabes.com/content/${folder}/`;
+  const suf = ".jpg";
+  const images = [];
+
+  for (let i=1; i<=300; i++) {
+    const nn = String(i).padStart(2,"0");
+    const url = `${baseURL}${prefix}-${nn}${suf}`;
+    if (!(await checkImage(url))) break;
+    images.push(url);
+  }
+  return images;
+}
+
+// ---------------------------
+// Fullscreen viewer
+// ---------------------------
+let activeImages = [];
+let currentIndex = 0;
+
+function openViewer(i) {
+  currentIndex = i;
+  const viewer = document.getElementById("viewer");
+  viewer.classList.add("show");
+  document.getElementById("viewImg").src = activeImages[i];
+}
+
+function closeViewer() { document.getElementById("viewer").classList.remove("show"); }
+function next() { currentIndex = (currentIndex+1)%activeImages.length; openViewer(currentIndex); }
+function prev() { currentIndex = (currentIndex-1+activeImages.length)%activeImages.length; openViewer(currentIndex); }
+
+document.getElementById("closeBtn").onclick = closeViewer;
+document.getElementById("right").onclick = next;
+document.getElementById("left").onclick = prev;
+
+// ---------------------------
+// Build gallery tiles
+// ---------------------------
+window.addEventListener("load", async () => {
+  activeImages = await loadAutoGallery();
+  if (activeImages.length === 0) {
+    document.getElementById("galleryView").innerHTML = "<p>No images found</p>";
+    return;
+  }
+
+  const viewDiv = document.getElementById("galleryView");
+  activeImages.forEach((url,i) => {
+    const img = document.createElement("img");
+    img.src = url;
+    img.onclick = () => openViewer(i);
+    viewDiv.appendChild(img);
+  });
+
+  // open viewer at requested image
+  const startIndex = parseInt(imageNo,10)-1;
+  openViewer(startIndex >= 0 ? startIndex : 0);
+});
+</script>
+
+</body>
+</html>
