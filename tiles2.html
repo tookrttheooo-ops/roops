@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Gallery Thumbnails</title>
+<style>
+body { margin:0; font-family:Arial; background:#111; color:white; }
+.gallery { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:8px; padding:10px; }
+.gallery img { width:100%; border-radius:6px; cursor:pointer; transition:0.2s; }
+.gallery img:hover { transform:scale(1.05); }
+</style>
+</head>
+<body>
+
+<h2 style="padding-left:10px;">Galleries</h2>
+<div class="gallery" id="galleryList"></div>
+
+<script>
+// ---------------------------------------
+// 1️⃣ MAIN IMAGE LINKS (your thumbnails)
+// ---------------------------------------
+const galleryLinks = [
+  "https://cdn.elitebabes.com/content/180759/0003-01.jpg",
+  "https://cdn.elitebabes.com/content/180964/0003-01.jpg",
+  "https://cdn.elitebabes.com/content/250860/0006-10.jpg",
+  "https://cdn.elitebabes.com/content/250921/0001-03.jpg",
+  "https://cdn.elitebabes.com/content/200167/0009-03.jpg",
+  "https://cdn.elitebabes.com/content/210124/0001-08.jpg",
+  "https://cdn.elitebabes.com/content/191012/0009-02.jpg",
+  "https://cdn.elitebabes.com/content/230386/0013-02.jpg",
+  "https://cdn.elitebabes.com/content/230459/0006-01.jpg",
+  "https://cdn.elitebabes.com/content/191064/0002-11.jpg",
+  "https://cdn.elitebabes.com/content/190462/0014-01.jpg",
+  "https://cdn.elitebabes.com/content/230559/0008-02.jpg",
+  "https://cdn.elitebabes.com/content/190769/0008-04.jpg",
+  "https://cdn.elitebabes.com/content/181077/0001-04.jpg",
+  "https://cdn.elitebabes.com/content/210834/0001-13.jpg",
+  "https://cdn.elitebabes.com/content/250901/0004-02.jpg",
+  "https://cdn.elitebabes.com/content/250430/0003-13.jpg",
+  "https://cdn.elitebabes.com/content/250524/0035-17.jpg",
+  "https://cdn.elitebabes.com/content/250754/0017-13.jpg",
+  "https://cdn.elitebabes.com/content/250883/0014-09.jpg",
+  "https://cdn.elitebabes.com/content/251033/0001-15.jpg",
+  "https://cdn.elitebabes.com/content/250130/0002-01.jpg",
+  "https://cdn.elitebabes.com/content/180301/0002-01.jpg",
+  "https://cdn.elitebabes.com/content/190332/0003-01.jpg",
+  "https://cdn.elitebabes.com/content/180639/0037-01.jpg",
+  "https://cdn.elitebabes.com/content/251127/0012-01.jpg",
+  "https://cdn.elitebabes.com/content/250964/0006-01.jpg",
+  "https://cdn.elitebabes.com/content/190313/0004-01.jpg",
+  "https://cdn.elitebabes.com/content/200280/0001-06.jpg",
+  "https://cdn.elitebabes.com/content/190306/0003-03.jpg",
+  "https://cdn.elitebabes.com/content/190728/0002-07.jpg",
+  "https://cdn.elitebabes.com/content/190273/0008-06.jpg",
+  "https://cdn.elitebabes.com/content/201090/0008-07.jpg",
+  "https://cdn.elitebabes.com/content/210933/0008-04.jpg",
+  "https://cdn.elitebabes.com/content/230459/0001-04.jpg",
+];
+
+// ---------------------------------------
+// 2️⃣ MATCHING REFERENCE LINKS (1-to-1)
+// put whatever links you want here
+// SAME LENGTH as galleryLinks[]
+// ---------------------------------------
+const galleryRefs = [
+  "https://example.com/gallery/180759",
+  "https://example.com/gallery/180964",
+  "https://example.com/gallery/250860",
+  "https://example.com/gallery/250921",
+  "https://example.com/gallery/200167",
+  "https://example.com/gallery/210124",
+  "https://example.com/gallery/191012",
+  "https://example.com/gallery/230386",
+  "https://example.com/gallery/230459-a",
+  "https://example.com/gallery/191064",
+  "https://example.com/gallery/190462",
+  "https://example.com/gallery/230559",
+  "https://example.com/gallery/190769",
+  "https://example.com/gallery/181077",
+  "https://example.com/gallery/210834",
+  "https://www.elitebabes.com/metart-carolina-guerrero-in-presenting-carolina-guerrero/#gallery-01-9",
+  "https://example.com/gallery/250430",
+  "https://example.com/gallery/250524",
+  "https://example.com/gallery/250754",
+  "https://example.com/gallery/250883",
+  "https://example.com/gallery/251033",
+  "https://example.com/gallery/250130",
+  "https://example.com/gallery/180301",
+  "https://example.com/gallery/190332",
+  "https://example.com/gallery/180639",
+  "https://example.com/gallery/251127",
+  "https://example.com/gallery/250964",
+  "https://example.com/gallery/190313",
+  "https://example.com/gallery/200280",
+  "https://example.com/gallery/190306",
+  "https://example.com/gallery/190728",
+  "https://example.com/gallery/190273",
+  "https://example.com/gallery/201090",
+  "https://example.com/gallery/210933",
+  "https://example.com/gallery/230459-b",
+];
+
+const galleryDiv = document.getElementById("galleryList");
+
+// ---------------------------------------
+// Parse folder & prefix from your URLs
+// ---------------------------------------
+function parseLink(url) {
+  const match = url.match(/^(.*\/)(\d{4}-)(\d{2})(\.jpg)$/);
+  if (!match) return null;
+  return {
+    folder: match[1].split('/').slice(-2,-1)[0],
+    prefix: match[2].slice(0,4),
+    thumb: match[3]
+  };
+}
+
+// ---------------------------------------
+// Build thumbnails with matching refs
+// ---------------------------------------
+galleryLinks.forEach((link, index) => {
+  const g = parseLink(link);
+  if (!g) return;
+
+  const img = document.createElement("img");
+  img.src = link;
+
+  img.onclick = () => {
+    const ref = encodeURIComponent(galleryRefs[index]);
+    const url = `gallery.html?folder=${g.folder}&prefix=${g.prefix}&image=${g.thumb}&ref=${ref}`;
+    window.open(url, "_blank");
+  };
+
+  galleryDiv.appendChild(img);
+});
+</script>
+
+</body>
+</html>
