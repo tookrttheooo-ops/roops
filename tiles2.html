@@ -1,24 +1,385 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Gallery Thumbnails</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gallery</title>
 <style>
-body { margin:0; font-family:Arial; background:#111; color:white; }
-.gallery { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:8px; padding:10px; }
-.gallery img { width:100%; border-radius:6px; cursor:pointer; transition:0.2s; }
-.gallery img:hover { transform:scale(1.05); }
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111;
+    --border: #222;
+    --accent: #e8d5b0;
+    --text: #ccc;
+    --dim: #555;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HOME VIEW ── */
+  #homeView {
+    padding: 0;
+  }
+
+  #homeHeader {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  #homeHeader h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  #homeHeader span {
+    font-size: 0.7rem;
+    color: var(--dim);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  #thumbGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .thumb-card {
+    position: relative;
+    aspect-ratio: 3/4;
+    overflow: hidden;
+    border-radius: 4px;
+    cursor: pointer;
+    background: var(--surface);
+  }
+
+  .thumb-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s cubic-bezier(.16,1,.3,1), filter 0.3s;
+    filter: brightness(0.88);
+  }
+
+  .thumb-card:hover img {
+    transform: scale(1.07);
+    filter: brightness(1);
+  }
+
+  .thumb-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 50%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .thumb-card:hover::after { opacity: 1; }
+
+  .thumb-label {
+    position: absolute;
+    bottom: 8px;
+    left: 10px;
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.7);
+    opacity: 0;
+    transition: opacity 0.3s;
+    letter-spacing: 0.05em;
+    pointer-events: none;
+  }
+
+  .thumb-card:hover .thumb-label { opacity: 1; }
+
+  /* Loading skeleton */
+  .thumb-card.loading {
+    background: linear-gradient(90deg, #161616 25%, #1e1e1e 50%, #161616 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ── GALLERY VIEW ── */
+  #galleryView {
+    display: none;
+    padding: 0;
+  }
+
+  #galleryHeader {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #galleryTitle {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+  }
+
+  #galleryCount {
+    font-size: 0.65rem;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  #galleryGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .gallery-thumb {
+    position: relative;
+    aspect-ratio: 3/4;
+    overflow: hidden;
+    border-radius: 4px;
+    cursor: pointer;
+    background: var(--surface);
+  }
+
+  .gallery-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s cubic-bezier(.16,1,.3,1), filter 0.3s;
+    filter: brightness(0.85);
+  }
+
+  .gallery-thumb:hover img {
+    transform: scale(1.06);
+    filter: brightness(1.05);
+  }
+
+  /* ── LIGHTBOX ── */
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0,0,0,0.96);
+    align-items: center;
+    justify-content: center;
+  }
+
+  #lightbox.show {
+    display: flex;
+  }
+
+  #lightboxImg {
+    max-width: calc(100vw - 100px);
+    max-height: calc(100vh - 60px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 3px;
+    user-select: none;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    display: block;
+  }
+
+  #lightboxImg.fading { opacity: 0; }
+
+  /* Arrows */
+  .lb-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: rgba(255,255,255,0.4);
+    font-size: 24px;
+    transition: color 0.2s, background 0.2s;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+    z-index: 2;
+    user-select: none;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .lb-arrow:hover {
+    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.1);
+  }
+
+  #lbLeft { left: 16px; }
+  #lbRight { right: 16px; }
+
+  /* Close btn */
+  #lbClose {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: rgba(255,255,255,0.4);
+    font-size: 20px;
+    transition: color 0.2s;
+    z-index: 2;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    user-select: none;
+  }
+
+  #lbClose:hover { color: rgba(255,255,255,0.9); }
+
+  /* Counter */
+  #lbCounter {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.3);
+    user-select: none;
+  }
+
+  /* ── HOME BUTTON (bottom right, in gallery view) ── */
+  #homeBtn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 500;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #111;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    transition: opacity 0.2s, transform 0.2s;
+  }
+
+  #homeBtn:hover { opacity: 0.85; transform: translateY(-2px); }
+  #homeBtn.visible { display: flex; }
+
+  /* Gallery loading overlay */
+  #galleryLoader {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    gap: 16px;
+    color: var(--dim);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+  }
+
+  #galleryLoader.show { display: flex; }
+
+  .loader-dots span {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin: 0 3px;
+    animation: bounce 1s infinite;
+  }
+
+  .loader-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .loader-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
 </style>
 </head>
 <body>
 
-<h2 style="padding-left:10px;">Galleries</h2>
-<div class="gallery" id="galleryList"></div>
+<!-- ── HOME VIEW ── -->
+<div id="homeView">
+  <div id="homeHeader">
+    <h1>Gallery</h1>
+    <span id="totalCount">loading...</span>
+  </div>
+  <div id="thumbGrid"></div>
+</div>
+
+<!-- ── GALLERY VIEW ── -->
+<div id="galleryView">
+  <div id="galleryHeader">
+    <div id="galleryTitle">—</div>
+    <div id="galleryCount">loading</div>
+  </div>
+  <div id="galleryLoader" class="show">
+    <div class="loader-dots"><span></span><span></span><span></span></div>
+    <div>fetching images</div>
+  </div>
+  <div id="galleryGrid"></div>
+</div>
+
+<!-- ── HOME BUTTON ── -->
+<button id="homeBtn">
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+    <path d="M1 5.5L6 1L11 5.5V11H7.5V8H4.5V11H1V5.5Z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+  </svg>
+  Home
+</button>
+
+<!-- ── LIGHTBOX ── -->
+<div id="lightbox">
+  <span id="lbClose" title="Close (Esc)">✕</span>
+  <span id="lbLeft" class="lb-arrow" title="Previous (←)">&#10094;</span>
+  <img id="lightboxImg" src="" alt="">
+  <span id="lbRight" class="lb-arrow" title="Next (→)">&#10095;</span>
+  <div id="lbCounter"></div>
+</div>
 
 <script>
-// ---------------------------------------
-// 1️⃣ MAIN IMAGE LINKS (your thumbnails)
-// ---------------------------------------
+// ─────────────────────────────────────────────
+// GALLERY DATA
+// ─────────────────────────────────────────────
 const galleryLinks = [
   "https://cdn.elitebabes.com/content/180759/0003-01.jpg",
   "https://cdn.elitebabes.com/content/180964/0003-01.jpg",
@@ -57,81 +418,240 @@ const galleryLinks = [
   "https://cdn.elitebabes.com/content/230459/0001-04.jpg",
 ];
 
-// ---------------------------------------
-// 2️⃣ MATCHING REFERENCE LINKS (1-to-1)
-// put whatever links you want here
-// SAME LENGTH as galleryLinks[]
-// ---------------------------------------
-const galleryRefs = [
-  "https://www.elitebabes.com/amazing-brunette-maxa-z-gets-undressed-and-poses-naked-showing-us-her-perfect-body-12920/",
-  "https://www.elitebabes.com/let-gorgeous-blonde-rune-kimele-make-your-day-much-better-15655/",
-  "https://www.elitebabes.com/metart-lilly-redd-in-presenting-lilly-redd-1/",
-  "https://www.elitebabes.com/femjoy-alice-mido-in-joyful-day/",
-  "https://www.elitebabes.com/curly-bombshell-chontelle-sprawls-her-magnificent-body-on-the-bed-35271/",
-  "https://www.elitebabes.com/magnificent-calypso-muse-reveals-her-tight-young-pussy-and-delectable-breasts-while-posing-48053/",
-  "https://www.elitebabes.com/skinny-beauty-elle-tan-poses-naked-on-the-bed-in-various-sexy-open-poses-31089/",
-  "https://www.elitebabes.com/irresistible-hilary-c-provocatively-bares-her-outstanding-flawless-body-and-gives-79923/",
-  "https://www.elitebabes.com/blonde-sweetheart-seduces-us-with-her-milky-body-as-she-spreads-her-ass-cheeks-flaunting-80927/",
-  "https://www.elitebabes.com/adorable-young-doll-poses-naked-on-the-chair-in-various-erotic-poses-31806/",
-  "https://www.elitebabes.com/sweet-and-charming-babe-spreads-her-legs-and-lets-us-see-her-delicious-pink-pussy-23372/",
-  "https://www.elitebabes.com/the-tempting-babe-looks-irresistible-while-getting-nude-and-uncovering-her-exquisite-82046/",
-  "https://www.elitebabes.com/her-red-lips-and-small-tits-are-so-tempting-and-sweet-while-this-brunette-model-posing-naked-27415/",
-  "https://www.elitebabes.com/small-titted-brunette-lena-anderson-takes-off-her-short-skirt-to-show-us-her-nice-tight-ass-17052/",
-  "https://www.elitebabes.com/cute-svenja-undresses-on-the-tennis-court-showing-her-boobies-and-smooth-ass-56305/",
-  "https://www.elitebabes.com/sex-art-carolina-guerrero-in-sultry-seduction/",
-  "https://www.elitebabes.com/model/keira-jackson-2/sort/pins/",
-  "https://www.elitebabes.com/femjoy-alice-mido-in-the-light-of-day-103682/",
-  "https://www.elitebabes.com/wow-girls-bella-spark-in-glow-season/",
-  "https://www.elitebabes.com/metart-foxy-alissa-in-pure-desire/",
-  "https://www.elitebabes.com/femjoy-alice-mido-in-chair-alluring/",
-  "https://www.elitebabes.com/zishy-zoe-aguilar-in-fire-starter-102456/",
-  "https://www.metarthunter.com/horny-runa-takes-her-black-underwear-off-in-the-living-room-7417/",
-  "https://www.elitebabes.com/two-hot-chicks-are-showing-off-their-asses-in-this-nice-beach-posing-staff-22014/",
-  "https://www.elitebabes.com/beautiful-brunette-angel-poses-naked-and-stuns-everyone-with-her-fabulous-body-11333/",
-  "https://www.elitebabes.com/wow-girls-sonya-blaze-in-once-in-a-lifetime/",
-  "https://www.elitebabes.com/model/sonya-blaze/",
-  "https://www.elitebabes.com/two-young-and-beautiful-blonde-babes-playfully-pose-in-nature-21816/",
-  "https://www.elitebabes.com/so-hot-and-tempting-brunette-mila-azul-takes-her-bodysuit-off-and-poses-naked-on-the-bed-36679/",
-  "https://www.elitebabes.com/beautiful-brunette-with-amazing-body-is-rolling-naked-on-the-floor-to-seduce-you-21737/",
-  "https://www.elitebabes.com/brunette-hottie-avery-bends-over-letting-us-see-her-well-shaped-ass-and-meaty-muff-26795/",
-  "https://www.elitebabes.com/kaitlin-takes-off-her-tight-black-dress-and-bends-over-letting-us-see-her-yummy-pussy-and-peachy-ass-21621/",
-  "https://www.elitebabes.com/collection/nr/23156/",
-  "https://www.elitebabes.com/fantastic-hottie-undresses-and-reveals-smoking-hot-body-and-great-ass-57527/",
-  "https://www.elitebabes.com/model/sonya-blaze/",
-];
-const galleryDiv = document.getElementById("galleryList");
-
-// ---------------------------------------
-// Parse folder & prefix from your URLs
-// ---------------------------------------
+// ─────────────────────────────────────────────
+// PARSE GALLERY LINK
+// ─────────────────────────────────────────────
 function parseLink(url) {
-  const match = url.match(/^(.*\/)(\d{4}-)(\d{2})(\.jpg)$/);
-  if (!match) return null;
-  return {
-    folder: match[1].split('/').slice(-2,-1)[0],
-    prefix: match[2].slice(0,4),
-    thumb: match[3]
-  };
+  // Pattern: .../FOLDER/PREFIX-NN.jpg
+  const m = url.match(/\/content\/(\d+)\/(\d+)-(\d+)\.jpg$/);
+  if (!m) return null;
+  return { folder: m[1], prefix: m[2], thumb: m[3] };
 }
 
-// ---------------------------------------
-// Build thumbnails with matching refs
-// ---------------------------------------
-galleryLinks.forEach((link, index) => {
+// ─────────────────────────────────────────────
+// CHECK IMAGE EXISTS
+// ─────────────────────────────────────────────
+function checkImage(url) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => res(true);
+    img.onerror = () => res(false);
+    img.src = url;
+  });
+}
+
+// ─────────────────────────────────────────────
+// LOAD FULL GALLERY IMAGES
+// ─────────────────────────────────────────────
+async function loadGalleryImages(folder, prefix) {
+  const base = `https://cdn.elitebabes.com/content/${folder}/`;
+  const images = [];
+  for (let i = 1; i <= 40; i++) {
+    const nn = String(i).padStart(2, "0");
+    const url = `${base}${prefix}-${nn}.jpg`;
+    if (!(await checkImage(url))) break;
+    images.push(url);
+  }
+  return images;
+}
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let activeImages = [];
+let lightboxIndex = 0;
+
+// ─────────────────────────────────────────────
+// VIEWS
+// ─────────────────────────────────────────────
+const homeView    = document.getElementById("homeView");
+const galleryView = document.getElementById("galleryView");
+const homeBtn     = document.getElementById("homeBtn");
+
+function showHome() {
+  homeView.style.display = "block";
+  galleryView.style.display = "none";
+  homeBtn.classList.remove("visible");
+  closeLightbox();
+}
+
+function showGallery() {
+  homeView.style.display = "none";
+  galleryView.style.display = "block";
+  homeBtn.classList.add("visible");
+}
+
+homeBtn.addEventListener("click", showHome);
+
+// ─────────────────────────────────────────────
+// BUILD HOME THUMBNAILS
+// ─────────────────────────────────────────────
+const thumbGrid  = document.getElementById("thumbGrid");
+const totalCount = document.getElementById("totalCount");
+
+totalCount.textContent = `${galleryLinks.length} galleries`;
+
+galleryLinks.forEach((link, idx) => {
   const g = parseLink(link);
   if (!g) return;
 
+  const card = document.createElement("div");
+  card.className = "thumb-card loading";
+
   const img = document.createElement("img");
   img.src = link;
+  img.loading = "lazy";
+  img.onload = () => card.classList.remove("loading");
+  img.onerror = () => card.classList.remove("loading");
 
-  img.onclick = () => {
-    const ref = encodeURIComponent(galleryRefs[index]);
-    const url = `gallery2.html?folder=${g.folder}&prefix=${g.prefix}&image=${g.thumb}&ref=${ref}`;
-    window.open(url, "_blank");
-  };
+  const label = document.createElement("div");
+  label.className = "thumb-label";
+  label.textContent = `#${String(idx + 1).padStart(2, "0")}`;
 
-  galleryDiv.appendChild(img);
+  card.appendChild(img);
+  card.appendChild(label);
+
+  card.addEventListener("click", () => openGallery(g.folder, g.prefix));
+
+  thumbGrid.appendChild(card);
 });
+
+// ─────────────────────────────────────────────
+// OPEN GALLERY
+// ─────────────────────────────────────────────
+const galleryGrid   = document.getElementById("galleryGrid");
+const galleryLoader = document.getElementById("galleryLoader");
+const galleryTitle  = document.getElementById("galleryTitle");
+const galleryCount  = document.getElementById("galleryCount");
+
+async function openGallery(folder, prefix) {
+  showGallery();
+  galleryGrid.innerHTML = "";
+  galleryLoader.classList.add("show");
+  galleryTitle.textContent = `Gallery — ${folder}`;
+  galleryCount.textContent = "loading…";
+  activeImages = [];
+
+  const images = await loadGalleryImages(folder, prefix);
+  activeImages = images;
+  galleryLoader.classList.remove("show");
+
+  if (images.length === 0) {
+    galleryGrid.innerHTML = `<p style="padding:20px;color:#555;font-size:.8rem;">No images found.</p>`;
+    galleryCount.textContent = "0 images";
+    return;
+  }
+
+  galleryCount.textContent = `${images.length} images`;
+
+  images.forEach((url, i) => {
+    const card = document.createElement("div");
+    card.className = "gallery-thumb loading";
+
+    const img = document.createElement("img");
+    img.src = url;
+    img.loading = "lazy";
+    img.onload = () => card.classList.remove("loading");
+    img.onerror = () => card.classList.remove("loading");
+
+    card.appendChild(img);
+    card.addEventListener("click", () => openLightbox(i));
+    galleryGrid.appendChild(card);
+  });
+}
+
+// ─────────────────────────────────────────────
+// LIGHTBOX
+// ─────────────────────────────────────────────
+const lightbox    = document.getElementById("lightbox");
+const lightboxImg = document.getElementById("lightboxImg");
+const lbCounter   = document.getElementById("lbCounter");
+
+function openLightbox(i) {
+  lightboxIndex = i;
+  lightboxImg.src = activeImages[i];
+  lightbox.classList.add("show");
+  updateCounter();
+}
+
+function closeLightbox() {
+  lightbox.classList.remove("show");
+}
+
+function updateCounter() {
+  lbCounter.textContent = `${lightboxIndex + 1} / ${activeImages.length}`;
+}
+
+function navigateLightbox(dir) {
+  lightboxIndex = (lightboxIndex + dir + activeImages.length) % activeImages.length;
+  lightboxImg.classList.add("fading");
+  setTimeout(() => {
+    lightboxImg.src = activeImages[lightboxIndex];
+    lightboxImg.classList.remove("fading");
+    updateCounter();
+  }, 120);
+}
+
+// Close on backdrop click (not on image or arrows)
+lightbox.addEventListener("click", (e) => {
+  if (e.target === lightbox) closeLightbox();
+});
+
+document.getElementById("lbClose").addEventListener("click", closeLightbox);
+document.getElementById("lbLeft").addEventListener("click", (e) => { e.stopPropagation(); navigateLightbox(-1); });
+document.getElementById("lbRight").addEventListener("click", (e) => { e.stopPropagation(); navigateLightbox(1); });
+
+// ─────────────────────────────────────────────
+// KEYBOARD
+// ─────────────────────────────────────────────
+document.addEventListener("keydown", (e) => {
+  if (!lightbox.classList.contains("show")) return;
+  if (e.key === "ArrowLeft" || e.key === "ArrowUp") navigateLightbox(-1);
+  else if (e.key === "ArrowRight" || e.key === "ArrowDown") navigateLightbox(1);
+  else if (e.key === "Escape") closeLightbox();
+});
+
+// ─────────────────────────────────────────────
+// SWIPE / DRAG (mouse + touch)
+// ─────────────────────────────────────────────
+let dragStartX = null;
+let dragStartY = null;
+const SWIPE_THRESHOLD = 50;
+
+function onDragStart(clientX, clientY) {
+  dragStartX = clientX;
+  dragStartY = clientY;
+}
+
+function onDragEnd(clientX, clientY) {
+  if (dragStartX === null) return;
+  const dx = clientX - dragStartX;
+  const dy = clientY - dragStartY;
+  if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+    navigateLightbox(dx < 0 ? 1 : -1);
+  }
+  dragStartX = null;
+  dragStartY = null;
+}
+
+// Mouse drag
+lightbox.addEventListener("mousedown", (e) => {
+  if (e.target !== lightboxImg && e.target !== lightbox) return;
+  onDragStart(e.clientX, e.clientY);
+});
+lightbox.addEventListener("mouseup", (e) => {
+  onDragEnd(e.clientX, e.clientY);
+});
+
+// Touch swipe
+lightbox.addEventListener("touchstart", (e) => {
+  const t = e.touches[0];
+  onDragStart(t.clientX, t.clientY);
+}, { passive: true });
+lightbox.addEventListener("touchend", (e) => {
+  const t = e.changedTouches[0];
+  onDragEnd(t.clientX, t.clientY);
+}, { passive: true });
 </script>
 
 </body>
